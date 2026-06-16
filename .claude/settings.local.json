@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ' *)",
+      "Bash(python3 -c ' *)",
+      "Bash(python3)",
+      "Bash(python -m pip install -q scikit-learn joblib numpy)",
+      "Bash(python train.py)",
+      "Bash(python -m pip install -q fastapi uvicorn)",
+      "Bash(./.venv/Scripts/python.exe -c ' *)"
+    ]
+  }
+}
