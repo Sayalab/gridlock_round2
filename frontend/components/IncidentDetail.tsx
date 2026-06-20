@@ -1,6 +1,8 @@
 "use client";
 
 import type { Incident } from "@/lib/types";
+import GreenWaveCard from "@/components/GreenWaveCard";
+import QuarantineCard from "@/components/QuarantineCard";
 
 const ROUTE_COLORS = ["#4f8bff", "#34c759", "#ff9f0a"];
 
@@ -38,6 +40,9 @@ export default function IncidentDetail({
           </div>
         </div>
       </div>
+
+      {/* fleet quarantine broadcast (severe incidents only) */}
+      <QuarantineCard quarantine={incident.quarantine} />
 
       {/* affected junctions */}
       {incident.affected_junctions.length > 0 && (
@@ -91,6 +96,9 @@ export default function IncidentDetail({
           <p className="mt-2 text-[10px] leading-relaxed text-white/30">
             <span className="text-[#e0301e]">✕</span> blockage · <span className="text-[#34c759]">A</span> start · <span className="text-[#4f8bff]">B</span> rejoin · red roads = congestion
           </p>
+
+          {/* adaptive green wave for the highlighted route */}
+          <GreenWaveCard plan={div.routes[activeRoute]?.signal_plan} />
         </div>
       )}
     </div>

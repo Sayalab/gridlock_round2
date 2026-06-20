@@ -9,6 +9,7 @@ import pandas as pd
 
 from config import MODELS_DIR, ZONE_STATS, color_for, radius_for
 from diversion import compute_diversion
+from quarantine import build_quarantine
 from road_network import segments_near
 
 
@@ -142,7 +143,7 @@ def enrich_incident(row: dict) -> dict:
     # real congested road geometry around the incident (Google-traffic style)
     congestion = congestion_segments(lat, lng, risk)
 
-    return {
+    result = {
         "id": row.get("id", "NA"),
         "cause": cause,
         "lat": lat, "lng": lng, "corridor": corridor,
@@ -163,3 +164,9 @@ def enrich_incident(row: dict) -> dict:
             "diversion": diversion,
         },
     }
+
+    # Commercial fleet quarantine broadcast — only for severe/closure incidents.
+    qz = build_quarantine(result)
+    if qz is not None:
+        result["quarantine"] = qz
+    return result

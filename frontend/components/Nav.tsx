@@ -26,6 +26,9 @@ export default function Nav() {
           <a href="#stack" className="rounded-full px-4 py-1.5 transition hover:bg-white/[0.05] hover:text-white">
             Stack
           </a>
+          <Link href="/fleet-api" className="rounded-full px-4 py-1.5 transition hover:bg-white/[0.05] hover:text-white">
+            Fleet API
+          </Link>
         </div>
 
         <Link href="/dashboard" className="btn-accent !px-5 !py-2 text-[13px]">

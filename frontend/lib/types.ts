@@ -25,6 +25,28 @@ export interface LegendItem {
   color: string;
 }
 
+export interface SignalNode {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  distance_m: number;
+  offset_s: number;
+  green_s: number;
+  red_s: number;
+}
+
+export interface SignalPlan {
+  strategy: string;
+  progression_speed_kph: number;
+  cycle_length_s: number;
+  bandwidth_s: number;
+  diverted_volume_vph: number;
+  expected_delay_reduction_pct: number;
+  corridor_length_m: number;
+  signals: SignalNode[];
+}
+
 export interface Route {
   rank: number;
   algorithm: string;
@@ -32,6 +54,7 @@ export interface Route {
   eta_min: number;
   summary: string;
   polyline: [number, number][];
+  signal_plan?: SignalPlan | null;
 }
 
 export interface Diversion {
@@ -56,6 +79,43 @@ export interface CongestionSegment {
   weight: number;
 }
 
+export interface QuarantineAltRoute {
+  rank: number;
+  distance_m: number;
+  eta_min: number;
+  summary: string;
+}
+
+export interface Quarantine {
+  quarantine_id: string;
+  version: string;
+  issued_at: string;
+  expires_at: string;
+  severity: string;
+  status: string;
+  reason: { cause: string; corridor: string; closure_probability: number };
+  geofence: {
+    type: string;
+    center: { lat: number; lng: number };
+    radius_m: number;
+    polygon: [number, number][];
+  };
+  action: string;
+  advisory: string;
+  estimated_volume_removed_pct: number;
+  affected_fleets: string[];
+  alternate_routes: QuarantineAltRoute[];
+}
+
+export interface QuarantineResponse {
+  endpoint: string;
+  generated_at: string;
+  next_since: string;
+  count: number;
+  estimated_total_volume_removed_pct: number;
+  zones: Quarantine[];
+}
+
 export interface Incident {
   id: string;
   cause: string;
@@ -78,6 +138,7 @@ export interface Incident {
     barricades: { lat: number; lng: number }[];
     diversion: Diversion | null;
   };
+  quarantine?: Quarantine;
 }
 
 export interface LiveFeedResponse {

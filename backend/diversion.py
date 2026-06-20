@@ -7,6 +7,7 @@ API + frontend keep working in a demo.
 from itertools import islice
 
 from road_network import get_graph, nearest_node, haversine_m
+from signals import green_wave_plan
 
 
 def _edge_path_to_coords(G, node_path):
@@ -68,7 +69,7 @@ def compute_diversion(lat, lng, risk, closure_prob,
     """Main entry: returns the `diversion` dict for the JSON contract."""
     G = get_graph()
     if G is None:
-        return _fallback(lat, lng, blocked_label, k)
+        return _fallback(lat, lng, blocked_label, k, risk, closure_prob)
 
     import networkx as nx
 
@@ -87,19 +88,22 @@ def compute_diversion(lat, lng, risk, closure_prob,
         for i, path in enumerate(islice(gen, k)):
             dist_m, eta = _route_metrics(Gr, path)
             algo = "dijkstra/yen-k1" if i == 0 else f"yen-k{i+1}"
+            poly = _edge_path_to_coords(Gr, path)
             routes.append({
                 "rank": i + 1,
                 "algorithm": algo,
                 "distance_m": dist_m,
                 "eta_min": eta,
                 "summary": f"alternate route {i+1}",
-                "polyline": _edge_path_to_coords(Gr, path),
+                "polyline": poly,
+                # adaptive green-wave timing so the alternate doesn't re-jam
+                "signal_plan": green_wave_plan(poly, risk, closure_prob),
             })
     except (nx.NetworkXNoPath, nx.NodeNotFound):
-        return _fallback(lat, lng, blocked_label, k)
+        return _fallback(lat, lng, blocked_label, k, risk, closure_prob)
 
     if not routes:
-        return _fallback(lat, lng, blocked_label, k)
+        return _fallback(lat, lng, blocked_label, k, risk, closure_prob)
 
     return {
         "blocked_segment": blocked_label,
@@ -128,7 +132,7 @@ def astar_route(lat, lng, src, dst):
         return None
 
 
-def _fallback(lat, lng, blocked_label, k):
+def _fallback(lat, lng, blocked_label, k, risk=50, closure_prob=0.5):
     """Plausible synthetic routes when the real graph isn't available."""
     offsets = [
         (0.006, 0.004, "via parallel arterial"),
@@ -149,6 +153,7 @@ def _fallback(lat, lng, blocked_label, k):
             "eta_min": round(dist / 250, 1),
             "summary": summ,
             "polyline": poly,
+            "signal_plan": green_wave_plan(poly, risk, closure_prob),
         })
     return {
         "blocked_segment": blocked_label,

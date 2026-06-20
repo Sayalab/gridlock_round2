@@ -13,6 +13,7 @@ from config import LEGEND, ZONE_STATS, color_for, radius_for
 from feed_sim import first_time, incidents_between
 from predictor import enrich_incident, baseline_risk, congestion_segments
 from diversion import compute_diversion
+from quarantine import build_quarantine
 
 app = FastAPI(title="Gridlock — Event-Driven Congestion API")
 app.add_middleware(
@@ -24,7 +25,9 @@ app.add_middleware(
 
 @app.get("/")
 def root():
-    return {"ok": True, "endpoints": ["/api/live-feed", "/api/risk-map", "/api/forecast"],
+    return {"ok": True,
+            "endpoints": ["/api/live-feed", "/api/risk-map", "/api/forecast",
+                          "/api/fleet/quarantines"],
             "sim_start": first_time().isoformat()}
 
 
@@ -52,6 +55,34 @@ def live_feed(since: str | None = None, window: int = 120):
         },
         "new_incidents": incidents,
         "legend": LEGEND,
+    }
+
+
+# ------------------------------------------------- ENDPOINT 1b (B2B BROADCAST)
+@app.get("/api/fleet/quarantines")
+def fleet_quarantines(since: str | None = None, window: int = 120,
+                      active_only: bool = True):
+    """Commercial Fleet Quarantine API — geo-fence zones delivery fleets poll to
+    keep drivers out of severe choke points. Derived from the same live feed."""
+    since_ts = pd.to_datetime(since) if since else first_time()
+    raw, end = incidents_between(since_ts, window_minutes=window)
+
+    zones = []
+    for r in raw:
+        inc = enrich_incident(r)
+        qz = inc.get("quarantine") or build_quarantine(inc)
+        if qz and (not active_only or qz["status"] == "active"):
+            zones.append(qz)
+
+    avg_vol = (round(sum(z["estimated_volume_removed_pct"] for z in zones) / len(zones))
+               if zones else 0)
+    return {
+        "endpoint": "/api/fleet/quarantines",
+        "generated_at": since_ts.isoformat(),
+        "next_since": end.isoformat(),
+        "count": len(zones),
+        "estimated_total_volume_removed_pct": avg_vol,
+        "zones": zones,
     }
 
 

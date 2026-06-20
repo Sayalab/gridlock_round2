@@ -12,6 +12,7 @@ import IncidentDetail from "@/components/IncidentDetail";
 import ForecastForm from "@/components/ForecastForm";
 import Legend from "@/components/Legend";
 import StatCard from "@/components/StatCard";
+import GreenWaveCard from "@/components/GreenWaveCard";
 import { getLiveFeed, getRiskMap, postForecast } from "@/lib/api";
 import type {
   CongestionSegment,
@@ -414,6 +415,9 @@ function ForecastPanel({
                   );
                 })}
               </div>
+
+              {/* adaptive green wave for the highlighted venue route */}
+              <GreenWaveCard plan={venue.routes[activeRoute]?.signal_plan} />
             </div>
           )}
         </div>

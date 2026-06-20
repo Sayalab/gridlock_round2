@@ -167,6 +167,74 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ---------------- FLEET QUARANTINE API ---------------- */}
+      <section id="fleet" className="relative mx-auto max-w-6xl px-6 py-20">
+        <div className="card overflow-hidden p-10 sm:p-14">
+          <div className="grid gap-12 md:grid-cols-2 md:items-center">
+            <div>
+              <span className="inline-block rounded-full border border-[#ff9f0a]/30 bg-[#ff9f0a]/[0.08] px-3 py-1 text-xs font-medium text-[#ffce8a]">
+                B2B Broadcast API
+              </span>
+              <h2 className="mt-5 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                Quarantine the choke point — before fleets drive into it.
+              </h2>
+              <p className="mt-4 text-white/50">
+                20–30% of city traffic is delivery fleets. The instant Gridlock detects a
+                severe closure, it broadcasts a <span className="text-white/75">Geo-Fence Quarantine</span> to
+                commercial operators — so Flipkart, Swiggy, Zepto, Amazon and Rapido route
+                their drivers away automatically, pulling ~20% of volume out of the jam at the source.
+              </p>
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                <Link href="/fleet-api" className="btn-accent">
+                  Read the API docs
+                </Link>
+                <Link href="/dashboard" className="btn-ghost">
+                  See it in the console
+                </Link>
+              </div>
+              <div className="mt-8 grid grid-cols-3 gap-px overflow-hidden rounded-2xl border border-white/[0.06]">
+                {[
+                  ["~20%", "volume removed"],
+                  ["5", "fleet partners"],
+                  ["Geo-fence", "JSON payload"],
+                ].map(([k, v]) => (
+                  <div key={v} className="bg-white/[0.02] px-4 py-5">
+                    <div className="text-xl font-semibold tracking-tight text-white">{k}</div>
+                    <div className="mt-1 text-[11px] text-white/45">{v}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* payload preview */}
+            <div className="rounded-2xl border border-white/[0.08] bg-ink-900/80 p-5 font-mono text-[11px] leading-relaxed shadow-soft">
+              <div className="mb-3 flex items-center gap-2 text-white/40">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#ff9f0a]" />
+                POST broadcast · /api/fleet/quarantines
+              </div>
+              <pre className="overflow-x-auto text-white/70">
+{`{
+  "quarantine_id": "QZ-FKID005762",
+  "severity": "severe",
+  "status": "active",
+  "action": "avoid",
+  "geofence": {
+    "type": "circle",
+    "center": { "lat": 12.978, "lng": 77.641 },
+    "radius_m": 625
+  },
+  "estimated_volume_removed_pct": 22,
+  "affected_fleets": [
+    "Flipkart", "Swiggy", "Zepto", "Amazon", "Rapido"
+  ],
+  "expires_at": "2024-03-01T11:50:00+00:00"
+}`}
+              </pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ---------------- CTA ---------------- */}
       <section className="relative mx-auto max-w-6xl px-6 py-28">
         <div className="relative overflow-hidden rounded-4xl border border-white/[0.07] bg-white/[0.02] px-8 py-20 text-center">

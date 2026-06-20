@@ -4,6 +4,7 @@ import type {
   ForecastRequest,
   ForecastResponse,
   LiveFeedResponse,
+  QuarantineResponse,
   RiskMapResponse,
 } from "./types";
 
@@ -24,6 +25,14 @@ export function getRiskMap(datetime?: string): Promise<RiskMapResponse> {
   const qs = new URLSearchParams();
   if (datetime) qs.set("datetime", datetime);
   return getJSON<RiskMapResponse>(`/api/risk-map?${qs.toString()}`);
+}
+
+export function getFleetQuarantines(opts?: { since?: string; window?: number; activeOnly?: boolean }): Promise<QuarantineResponse> {
+  const qs = new URLSearchParams();
+  if (opts?.since) qs.set("since", opts.since);
+  qs.set("window", String(opts?.window ?? 240));
+  qs.set("active_only", String(opts?.activeOnly ?? true));
+  return getJSON<QuarantineResponse>(`/api/fleet/quarantines?${qs.toString()}`);
 }
 
 export async function postForecast(body: ForecastRequest): Promise<ForecastResponse> {

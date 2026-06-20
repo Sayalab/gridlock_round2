@@ -87,7 +87,11 @@ export default function MapView({
 
   return (
     <MapContainer center={center} zoom={zoom} zoomControl={false} attributionControl className="h-full w-full" style={{ background: "#0a0a0c" }}>
-      <TileLayer  url={`https://apis.mappls.com/advancedmaps/v1/${process.env.NEXT_PUBLIC_MAPPLS_KEY}/still_map/{z}/{x}/{y}.png`}attribution='&copy; Mappls, &copy; MapmyIndia' maxZoom={18}/>
+      <TileLayer 
+        url={process.env.NEXT_PUBLIC_MAPPLS_KEY ? `https://apis.mappls.com/advancedmaps/v1/${process.env.NEXT_PUBLIC_MAPPLS_KEY}/still_map/{z}/{x}/{y}.png` : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"}
+        attribution={process.env.NEXT_PUBLIC_MAPPLS_KEY ? '&copy; Mappls, &copy; MapmyIndia' : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'}
+        maxZoom={18}
+      />
       <Recenter center={center} zoom={zoom} />
 
       {/* faint risk halo */}
@@ -157,6 +161,23 @@ export default function MapView({
           interactive={false}
         />
       )}
+
+      {/* GREEN WAVE — adaptive signal points timed along the active diversion */}
+      {div?.routes[activeRoute]?.signal_plan?.signals.map((s, i) => (
+        <CircleMarker
+          key={`sig-${i}`}
+          center={[s.lat, s.lng]}
+          radius={4}
+          pathOptions={{ color: "#0a0a0c", fillColor: "#34c759", fillOpacity: 1, weight: 2 }}
+        >
+          <Tooltip direction="top" opacity={1} className="!border-0 !bg-transparent !shadow-none">
+            <div className="rounded-lg bg-ink-800/95 px-2.5 py-1.5 text-xs text-white shadow-soft backdrop-blur">
+              <div className="font-medium">{s.name}</div>
+              <div className="text-white/60">offset {s.offset_s}s · green {s.green_s}s</div>
+            </div>
+          </Tooltip>
+        </CircleMarker>
+      ))}
 
       {/* diversion START / END pins */}
       {div && (
