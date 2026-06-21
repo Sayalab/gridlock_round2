@@ -76,9 +76,9 @@ def compute_diversion(lat, lng, risk, closure_prob,
     src = src or {"lat": lat - 0.004, "lng": lng - 0.004}
     dst = dst or {"lat": lat + 0.004, "lng": lng + 0.004}
 
-    # Extract a local subgraph (e.g. ~4.5 km radius) to avoid O(N) memory copies
+    # Extract a local subgraph (e.g. ~1.5 km radius) to avoid O(N) memory copies
     # and to vastly speed up Dijkstra / Yen's K algorithm.
-    margin = 0.04
+    margin = 0.015
     local_nodes = [
         n for n, d in G.nodes(data=True)
         if abs(d.get("y", 0) - lat) < margin and abs(d.get("x", 0) - lng) < margin
