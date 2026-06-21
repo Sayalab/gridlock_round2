@@ -6,13 +6,15 @@ Docs: http://localhost:8000/docs
 import json
 
 import pandas as pd
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import LEGEND, ZONE_STATS, color_for, radius_for
 from feed_sim import first_time, incidents_between
 from predictor import enrich_incident, baseline_risk, congestion_segments
 from diversion import compute_diversion
+from quarantine import build_quarantine
+import api_keys
 from dispatch import generate_dispatch_plan
 from fleet_quarantine import generate_quarantine
 from green_wave import compute_green_wave
@@ -27,7 +29,9 @@ app.add_middleware(
 
 @app.get("/")
 def root():
-    return {"ok": True, "endpoints": ["/api/live-feed", "/api/risk-map", "/api/forecast"],
+    return {"ok": True,
+            "endpoints": ["/api/live-feed", "/api/risk-map", "/api/forecast",
+                          "/api/fleet/quarantines", "/api/fleet/keys"],
             "sim_start": first_time().isoformat()}
 
 
@@ -69,6 +73,61 @@ def live_feed(since: str | None = None, window: int = 120):
         },
         "new_incidents": incidents,
         "legend": LEGEND,
+    }
+
+
+# ----------------------------------------------------- FLEET API — KEY ISSUER
+@app.get("/api/fleet/keys")
+def fleet_keys():
+    """List the API keys issued for the Fleet Quarantine API (secrets masked)."""
+    return {"keys": api_keys.list_keys()}
+
+
+@app.post("/api/fleet/keys")
+def create_fleet_key(body: dict | None = None):
+    """Mint a new working API key. Returns the full secret exactly once."""
+    body = body or {}
+    issued = api_keys.issue_key(
+        name=body.get("name", "Untitled"),
+        fleet=body.get("fleet", "Custom"),
+    )
+    return {"created": True, **issued}
+
+
+# ------------------------------------------------- ENDPOINT 1b (B2B BROADCAST)
+@app.get("/api/fleet/quarantines")
+def fleet_quarantines(since: str | None = None, window: int = 120,
+                      active_only: bool = True,
+                      x_api_key: str | None = Header(default=None)):
+    """Commercial Fleet Quarantine API — geo-fence zones delivery fleets poll to
+    keep drivers out of severe choke points. Derived from the same live feed.
+
+    Requires a valid ``X-API-Key`` header (issue one at /api/fleet/keys)."""
+    if not api_keys.is_valid(x_api_key):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing API key. Send a valid 'X-API-Key' header.",
+        )
+
+    since_ts = pd.to_datetime(since) if since else first_time()
+    raw, end = incidents_between(since_ts, window_minutes=window)
+
+    zones = []
+    for r in raw:
+        inc = enrich_incident(r)
+        qz = inc.get("quarantine") or build_quarantine(inc)
+        if qz and (not active_only or qz["status"] == "active"):
+            zones.append(qz)
+
+    avg_vol = (round(sum(z["estimated_volume_removed_pct"] for z in zones) / len(zones))
+               if zones else 0)
+    return {
+        "endpoint": "/api/fleet/quarantines",
+        "generated_at": since_ts.isoformat(),
+        "next_since": end.isoformat(),
+        "count": len(zones),
+        "estimated_total_volume_removed_pct": avg_vol,
+        "zones": zones,
     }
 
 
