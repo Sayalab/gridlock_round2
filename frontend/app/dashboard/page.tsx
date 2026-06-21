@@ -75,7 +75,7 @@ export default function Dashboard() {
 
   const tick = useCallback(async () => {
     try {
-      const data = await getLiveFeed(sinceRef.current, 120);
+      const data = await getLiveFeed(sinceRef.current, 30);
       setError(null);
       sinceRef.current = data.next_since;
       setSimTime(data.sim_time);
