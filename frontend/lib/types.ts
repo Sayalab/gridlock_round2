@@ -56,6 +56,87 @@ export interface CongestionSegment {
   weight: number;
 }
 
+// ---- Fleet Quarantine (Innovation #1) ----
+
+export interface FleetResponse {
+  operator: string;
+  operator_color: string;
+  fleet_type: string;
+  vehicles_in_zone: number;
+  vehicles_rerouted: number;
+  compliance_pct: number;
+  status: "acknowledged" | "rerouting" | "completed";
+  ack_time_sec: number;
+}
+
+export interface FleetQuarantine {
+  zone_center: { lat: number; lng: number };
+  zone_radius_m: number;
+  severity_trigger: string;
+  broadcast_payload: Record<string, unknown>;
+  fleet_responses: FleetResponse[];
+  estimated_impact: {
+    total_commercial_vehicles: number;
+    vehicles_diverted: number;
+    volume_reduction_pct: number;
+    cascading_prevention: string;
+  };
+  headline: string;
+}
+
+// ---- Adaptive Green Wave (Innovation #2) ----
+
+export interface GreenWaveSignal {
+  junction_name: string;
+  lat: number;
+  lng: number;
+  signal_index: number;
+  current_green_sec: number;
+  recommended_green_sec: number;
+  green_extension_sec: number;
+  phase_offset_sec: number;
+  cycle_time_sec: number;
+}
+
+export interface GreenWave {
+  corridor_name: string;
+  signals: GreenWaveSignal[];
+  wave_speed_kmh: number;
+  flush_duration_min: number;
+  duration_min: number;
+  optimal_cycle_sec: number;
+  total_flow_vph: number;
+  green_fraction: number;
+  headline: string;
+}
+
+// ---- Pre-Positioning Dispatch (Innovation #3) ----
+
+export interface DispatchResource {
+  type: "tow_truck" | "ambulance" | "patrol";
+  count: number;
+  eta_if_incident_min: number;
+}
+
+export interface DispatchEntry {
+  corridor: string;
+  lat: number;
+  lng: number;
+  risk_score: number;
+  resources: DispatchResource[];
+}
+
+export interface DispatchPlan {
+  dispatch_plan: DispatchEntry[];
+  total_resources: { tow_trucks: number; ambulances: number; patrols: number };
+  pool_available: { tow_trucks: number; ambulances: number; patrols: number };
+  coverage_score: number;
+  avg_response_improvement_min: number;
+  headline: string;
+}
+
+// ---- Incident (updated with innovations) ----
+
 export interface Incident {
   id: string;
   cause: string;
@@ -78,7 +159,11 @@ export interface Incident {
     barricades: { lat: number; lng: number }[];
     diversion: Diversion | null;
   };
+  fleet_quarantine?: FleetQuarantine | null;
+  green_wave?: GreenWave | null;
 }
+
+// ---- API Responses ----
 
 export interface LiveFeedResponse {
   endpoint: string;
@@ -89,6 +174,8 @@ export interface LiveFeedResponse {
     active_incidents: number;
     high_priority: number;
     avg_clearance_min: number;
+    fleets_notified: number;
+    volume_reduction_pct: number;
     headline: string;
   };
   new_incidents: Incident[];
@@ -106,6 +193,7 @@ export interface RiskMapResponse {
   };
   baseline_zones: ZoneFull[];
   risk_timeline: TimelineStep[];
+  dispatch?: DispatchPlan;
   legend: LegendItem[];
 }
 
@@ -129,6 +217,8 @@ export interface ForecastResponse {
     barricades: { lat: number; lng: number }[];
     diversion: Diversion | null;
   }[];
+  fleet_quarantine?: FleetQuarantine | null;
+  green_wave?: GreenWave | null;
   legend: LegendItem[];
 }
 
@@ -140,3 +230,4 @@ export interface ForecastRequest {
   expected_crowd: number;
   forecast_days: number;
 }
+

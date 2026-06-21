@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css";
 import { MapContainer, TileLayer, Circle, CircleMarker, Polyline, Tooltip, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import { useEffect } from "react";
-import type { CongestionSegment, Diversion, Incident, Route } from "@/lib/types";
+import type { CongestionSegment, DispatchEntry, Diversion, GreenWaveSignal, Incident, Route } from "@/lib/types";
 
 export interface MapCircle {
   id: string;
@@ -26,6 +26,9 @@ interface Props {
   diversion?: Diversion | null;
   epicenter?: { lat: number; lng: number } | null;
   activeRoute?: number;
+  quarantineZone?: { lat: number; lng: number; radius_m: number } | null;
+  greenWaveSignals?: GreenWaveSignal[];
+  dispatchMarkers?: DispatchEntry[];
   onSelect?: (i: Incident) => void;
   onRouteSelect?: (i: number) => void;
 }
@@ -57,6 +60,36 @@ function pinIcon(color: string, label: string) {
   });
 }
 
+function signalIcon(index: number) {
+  return L.divIcon({
+    className: "",
+    html: `<div style="transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;
+      width:20px;height:20px;border-radius:6px;background:rgba(34,197,94,0.25);
+      border:2px solid rgba(34,197,94,0.6);box-shadow:0 0 12px rgba(34,197,94,0.4)">
+      <span style="color:#4ade80;font:700 9px/1 system-ui">${index}</span></div>`,
+    iconSize: [0, 0],
+  });
+}
+
+const DISPATCH_EMOJI: Record<string, string> = {
+  tow_truck: "🚛",
+  ambulance: "🚑",
+  patrol: "🚔",
+};
+
+function dispatchIcon(resources: { type: string; count: number }[]) {
+  const label = resources.map((r) => `${DISPATCH_EMOJI[r.type] || "📍"}${r.count}`).join("");
+  return L.divIcon({
+    className: "",
+    html: `<div style="transform:translate(-50%,-50%);display:flex;align-items:center;gap:2px;
+      background:rgba(59,130,246,0.2);backdrop-filter:blur(4px);
+      border:1.5px solid rgba(59,130,246,0.5);border-radius:999px;
+      padding:4px 8px;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,.4)">
+      <span style="font:600 11px/1 system-ui">${label}</span></div>`,
+    iconSize: [0, 0],
+  });
+}
+
 function Recenter({ center, zoom }: { center: [number, number]; zoom: number }) {
   const map = useMap();
   useEffect(() => {
@@ -79,6 +112,9 @@ export default function MapView({
   diversion,
   epicenter,
   activeRoute = 0,
+  quarantineZone,
+  greenWaveSignals = [],
+  dispatchMarkers = [],
   onSelect,
   onRouteSelect,
 }: Props) {
@@ -198,6 +234,63 @@ export default function MapView({
 
       {/* epicenter marker (the blockage / event point) */}
       {epi && <Marker position={[epi.lat, epi.lng]} icon={pinIcon("#e0301e", "✕")} interactive={false} />}
+
+      {/* FLEET QUARANTINE ZONE — dashed orange circle */}
+      {quarantineZone && (
+        <Circle
+          center={[quarantineZone.lat, quarantineZone.lng]}
+          radius={quarantineZone.radius_m}
+          pathOptions={{
+            color: "#f97316",
+            fillColor: "#f97316",
+            fillOpacity: 0.06,
+            weight: 2,
+            opacity: 0.7,
+            dashArray: "8 6",
+          }}
+        >
+          <Tooltip direction="top" opacity={1} className="!border-0 !bg-transparent !shadow-none">
+            <div className="rounded-lg bg-orange-950/90 px-2.5 py-1.5 text-xs text-orange-200 shadow-soft backdrop-blur">
+              <div className="font-medium">⚠ Fleet Quarantine Zone</div>
+              <div className="text-orange-300/60">{quarantineZone.radius_m}m radius · Commercial fleets rerouted</div>
+            </div>
+          </Tooltip>
+        </Circle>
+      )}
+
+      {/* GREEN WAVE SIGNAL MARKERS — traffic light dots along the diversion */}
+      {greenWaveSignals.map((sig, i) => (
+        <Marker
+          key={`gw-${i}`}
+          position={[sig.lat, sig.lng]}
+          icon={signalIcon(sig.signal_index)}
+          interactive={true}
+        >
+          <Tooltip direction="top" opacity={1} className="!border-0 !bg-transparent !shadow-none">
+            <div className="rounded-lg bg-ink-800/95 px-2.5 py-1.5 text-xs text-white shadow-soft backdrop-blur">
+              <div className="font-medium text-green-300">{sig.junction_name}</div>
+              <div className="text-white/60">Green: {sig.current_green_sec}s → {sig.recommended_green_sec}s (+{sig.green_extension_sec}s)</div>
+            </div>
+          </Tooltip>
+        </Marker>
+      ))}
+
+      {/* DISPATCH RESOURCE MARKERS — staged units at high-risk corridors */}
+      {dispatchMarkers.map((entry) => (
+        <Marker
+          key={`dp-${entry.corridor}`}
+          position={[entry.lat, entry.lng]}
+          icon={dispatchIcon(entry.resources)}
+          interactive={true}
+        >
+          <Tooltip direction="top" opacity={1} className="!border-0 !bg-transparent !shadow-none">
+            <div className="rounded-lg bg-ink-800/95 px-2.5 py-1.5 text-xs text-white shadow-soft backdrop-blur">
+              <div className="font-medium text-blue-300">{entry.corridor}</div>
+              <div className="text-white/60">Risk {entry.risk_score} · Pre-positioned resources</div>
+            </div>
+          </Tooltip>
+        </Marker>
+      ))}
     </MapContainer>
   );
 }

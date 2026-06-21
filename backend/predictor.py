@@ -10,6 +10,8 @@ import pandas as pd
 from config import MODELS_DIR, ZONE_STATS, color_for, radius_for
 from diversion import compute_diversion
 from road_network import segments_near
+from fleet_quarantine import generate_quarantine
+from green_wave import compute_green_wave
 
 
 def congestion_segments(lat, lng, risk, radius_m=350):
@@ -132,12 +134,23 @@ def enrich_incident(row: dict) -> dict:
 
     diversion = None
     officers = 4 if priority == "High" else 2
+    fleet_q = None
+    green_w = None
     if priority == "High" or closure > 0.5:
         officers = 6 if closure > 0.6 else 4
         diversion = compute_diversion(
             lat, lng, risk, closure,
             blocked_label=f"{corridor} @ {row.get('address','incident')[:40]}",
         )
+        # Fleet Quarantine — broadcast geo-fence to commercial fleets
+        fleet_q = generate_quarantine(
+            lat, lng, risk, closure, cause=cause, corridor=corridor,
+        )
+        # Green Wave — adaptive signal plan for the primary diversion route
+        if diversion and diversion.get("routes"):
+            green_w = compute_green_wave(
+                diversion["routes"][0], risk, closure, corridor=corridor,
+            )
 
     # real congested road geometry around the incident (Google-traffic style)
     congestion = congestion_segments(lat, lng, risk)
@@ -162,4 +175,6 @@ def enrich_incident(row: dict) -> dict:
             "barricades": [{"lat": round(lat, 5), "lng": round(lng, 5)}],
             "diversion": diversion,
         },
+        "fleet_quarantine": fleet_q,
+        "green_wave": green_w,
     }

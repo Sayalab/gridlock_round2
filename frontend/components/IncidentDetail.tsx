@@ -1,6 +1,8 @@
 "use client";
 
 import type { Incident } from "@/lib/types";
+import FleetQuarantine from "./FleetQuarantine";
+import GreenWave from "./GreenWave";
 
 const ROUTE_COLORS = ["#4f8bff", "#34c759", "#ff9f0a"];
 
@@ -93,6 +95,21 @@ export default function IncidentDetail({
           </p>
         </div>
       )}
+
+      {/* Green Wave — adaptive signal plan for the diversion route */}
+      {incident.green_wave && (
+        <div className="border-t border-white/[0.06] pt-5">
+          <GreenWave data={incident.green_wave} />
+        </div>
+      )}
+
+      {/* Fleet Quarantine — B2B broadcast to commercial fleets */}
+      {incident.fleet_quarantine && (
+        <div className="border-t border-white/[0.06] pt-5">
+          <FleetQuarantine data={incident.fleet_quarantine} />
+        </div>
+      )}
     </div>
   );
 }
+

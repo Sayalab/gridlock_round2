@@ -12,12 +12,17 @@ import IncidentDetail from "@/components/IncidentDetail";
 import ForecastForm from "@/components/ForecastForm";
 import Legend from "@/components/Legend";
 import StatCard from "@/components/StatCard";
+import DispatchPlanComp from "@/components/DispatchPlan";
+import FleetQuarantineComp from "@/components/FleetQuarantine";
+import GreenWaveComp from "@/components/GreenWave";
 import { getLiveFeed, getRiskMap, postForecast } from "@/lib/api";
 import type {
   CongestionSegment,
+  DispatchEntry,
   Diversion,
   ForecastRequest,
   ForecastResponse,
+  GreenWaveSignal,
   Incident,
   LegendItem,
   LiveFeedResponse,
@@ -136,11 +141,19 @@ export default function Dashboard() {
 
   // ---------- map layers per mode ----------
   const map = useMemo(() => {
+    const empty = {
+      quarantineZone: null as { lat: number; lng: number; radius_m: number } | null,
+      greenWaveSignals: [] as GreenWaveSignal[],
+      dispatchMarkers: [] as DispatchEntry[],
+    };
+
     if (mode === "risk" && risk) {
       return {
         circles: circlesFromStep(risk.baseline_zones, risk.risk_timeline[riskIdx]),
         center: BLR, zoom: 12, mapIncidents: [] as Incident[],
         congestion: [] as CongestionSegment[], diversion: null as Diversion | null, epicenter: null as { lat: number; lng: number } | null,
+        ...empty,
+        dispatchMarkers: risk.dispatch?.dispatch_plan ?? [],
       };
     }
     if (mode === "forecast" && forecast) {
@@ -154,6 +167,11 @@ export default function Dashboard() {
         congestion: forecast.congestion_segments ?? [],
         diversion: venue,
         epicenter: echo.lat && echo.lng ? { lat: echo.lat, lng: echo.lng } : null,
+        quarantineZone: forecast.fleet_quarantine
+          ? { lat: forecast.fleet_quarantine.zone_center.lat, lng: forecast.fleet_quarantine.zone_center.lng, radius_m: forecast.fleet_quarantine.zone_radius_m }
+          : null,
+        greenWaveSignals: forecast.green_wave?.signals ?? [],
+        dispatchMarkers: [] as DispatchEntry[],
       };
     }
     // live
@@ -161,6 +179,11 @@ export default function Dashboard() {
     return {
       circles: [] as MapCircle[], center: c, zoom: selected ? 14 : 12, mapIncidents: incidents,
       congestion: selected?.congestion_segments ?? [], diversion: null as Diversion | null, epicenter: null as { lat: number; lng: number } | null,
+      quarantineZone: selected?.fleet_quarantine
+        ? { lat: selected.fleet_quarantine.zone_center.lat, lng: selected.fleet_quarantine.zone_center.lng, radius_m: selected.fleet_quarantine.zone_radius_m }
+        : null,
+      greenWaveSignals: selected?.green_wave?.signals ?? [],
+      dispatchMarkers: [] as DispatchEntry[],
     };
   }, [mode, risk, riskIdx, forecast, fcIdx, incidents, selected]);
 
@@ -199,6 +222,9 @@ export default function Dashboard() {
             diversion={map.diversion}
             epicenter={map.epicenter}
             activeRoute={activeRoute}
+            quarantineZone={map.quarantineZone}
+            greenWaveSignals={map.greenWaveSignals}
+            dispatchMarkers={map.dispatchMarkers}
             onSelect={(i) => { setSelected(i); setActiveRoute(0); }}
             onRouteSelect={setActiveRoute}
           />
@@ -277,6 +303,21 @@ function LivePanel({
         <StatCard label="Avg clear" value={`${summary?.avg_clearance_min ?? 0}m`} />
       </div>
 
+      {/* Fleet quarantine summary stats */}
+      {(summary?.fleets_notified ?? 0) > 0 && (
+        <div className="flex items-center gap-3 rounded-2xl border border-orange-500/15 bg-orange-500/[0.06] px-4 py-2.5">
+          <span className="text-sm">📡</span>
+          <div className="flex-1">
+            <div className="text-xs font-medium text-orange-200">
+              {summary!.fleets_notified} fleet operators notified
+            </div>
+            <div className="text-[10px] text-orange-300/50">
+              ~{summary!.volume_reduction_pct}% traffic volume reduced via quarantine
+            </div>
+          </div>
+        </div>
+      )}
+
       {selected ? (
         <div className="card flex-1 overflow-y-auto p-5">
           <button onClick={() => onSelect(null)} className="mb-4 text-xs text-white/45 hover:text-white">
@@ -317,19 +358,28 @@ function RiskPanel({ risk, idx }: { risk: RiskMapResponse | null; idx: number })
         <StatCard label="Top corridor" value={risk.summary.highest_zone?.name.split(" ")[0] ?? "—"} hint={`risk ${risk.summary.highest_zone?.risk_score ?? ""}`} />
       </div>
       <div className="card flex-1 overflow-hidden">
-        <div className="border-b border-white/[0.06] px-5 py-3 text-sm font-medium text-white">
-          Pre-position priority
-          <p className="mt-0.5 text-xs font-normal text-white/40">Corridors ranked by risk at this hour</p>
-        </div>
-        <div className="space-y-1.5 overflow-y-auto p-3">
-          {ranked.map((z, i) => (
-            <div key={z.zone_id} className="flex items-center gap-3 rounded-xl bg-white/[0.02] px-4 py-3">
-              <span className="text-xs text-white/30">{i + 1}</span>
-              <span className="h-2.5 w-2.5 rounded-full" style={{ background: z.color }} />
-              <span className="flex-1 text-sm text-white/80">{nameById.get(z.zone_id) ?? z.zone_id}</span>
-              <span className="text-sm font-semibold tabular-nums text-white">{z.risk_score}</span>
+        <div className="h-full overflow-y-auto">
+          <div className="border-b border-white/[0.06] px-5 py-3 text-sm font-medium text-white">
+            Pre-position priority
+            <p className="mt-0.5 text-xs font-normal text-white/40">Corridors ranked by risk at this hour</p>
+          </div>
+          <div className="space-y-1.5 p-3">
+            {ranked.map((z, i) => (
+              <div key={z.zone_id} className="flex items-center gap-3 rounded-xl bg-white/[0.02] px-4 py-3">
+                <span className="text-xs text-white/30">{i + 1}</span>
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: z.color }} />
+                <span className="flex-1 text-sm text-white/80">{nameById.get(z.zone_id) ?? z.zone_id}</span>
+                <span className="text-sm font-semibold tabular-nums text-white">{z.risk_score}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Pre-Positioning Dispatch Plan */}
+          {risk.dispatch && (
+            <div className="border-t border-white/[0.06] p-4">
+              <DispatchPlanComp data={risk.dispatch} />
             </div>
-          ))}
+          )}
         </div>
       </div>
     </>
@@ -414,6 +464,20 @@ function ForecastPanel({
                   );
                 })}
               </div>
+            </div>
+          )}
+
+          {/* Green Wave for the forecast diversion */}
+          {forecast.green_wave && (
+            <div className="border-t border-white/[0.06] pt-5">
+              <GreenWaveComp data={forecast.green_wave} />
+            </div>
+          )}
+
+          {/* Fleet Quarantine for the forecast event */}
+          {forecast.fleet_quarantine && (
+            <div className="border-t border-white/[0.06] pt-5">
+              <FleetQuarantineComp data={forecast.fleet_quarantine} />
             </div>
           )}
         </div>
