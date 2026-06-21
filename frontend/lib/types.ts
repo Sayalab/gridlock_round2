@@ -116,6 +116,23 @@ export interface QuarantineResponse {
   zones: Quarantine[];
 }
 
+export interface ApiKey {
+  key: string;       // masked in list responses; full secret only on creation
+  masked?: string;
+  name: string;
+  fleet: string;
+  created_at: string;
+  seeded?: boolean;
+}
+
+export interface ApiKeyList {
+  keys: ApiKey[];
+}
+
+export interface CreatedApiKey extends ApiKey {
+  created: boolean;
+}
+
 export interface Incident {
   id: string;
   cause: string;

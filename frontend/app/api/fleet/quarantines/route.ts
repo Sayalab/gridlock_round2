@@ -9,8 +9,15 @@ export async function GET(req: NextRequest) {
     const v = searchParams.get(k);
     if (v) qs.set(k, v);
   }
+  // forward the caller's API key to the backend so auth is enforced for real
+  const apiKey = req.headers.get("x-api-key");
+  const headers: Record<string, string> = {};
+  if (apiKey) headers["X-API-Key"] = apiKey;
   try {
-    const r = await fetch(`${API}/api/fleet/quarantines?${qs.toString()}`, { cache: "no-store" });
+    const r = await fetch(`${API}/api/fleet/quarantines?${qs.toString()}`, {
+      cache: "no-store",
+      headers,
+    });
     return NextResponse.json(await r.json(), { status: r.status });
   } catch (e) {
     return NextResponse.json(

@@ -22,7 +22,11 @@
       "Bash(echo \"=== TSC EXIT: $? ===\")",
       "Bash(curl -s -X POST \"http://localhost:8000/api/forecast\" -H \"Content-Type: application/json\" -d '{\"event_cause\":\"public_event\",\"lat\":12.9784,\"lng\":77.6408,\"start_datetime\":\"2026-06-20T17:00:00\",\"expected_crowd\":20000,\"forecast_days\":3}')",
       "Bash(pkill -f uvicorn)",
-      "Bash(python3 -c \"import json,sys; d=json.load\\(open\\('sample_response.json'\\)\\); print\\('TOP KEYS:', list\\(d.keys\\(\\)\\)\\); inc=d['new_incidents'][0] if d.get\\('new_incidents'\\) else {}; print\\('INCIDENT KEYS:', list\\(inc.keys\\(\\)\\)\\)\")"
+      "Bash(python3 -c \"import json,sys; d=json.load\\(open\\('sample_response.json'\\)\\); print\\('TOP KEYS:', list\\(d.keys\\(\\)\\)\\); inc=d['new_incidents'][0] if d.get\\('new_incidents'\\) else {}; print\\('INCIDENT KEYS:', list\\(inc.keys\\(\\)\\)\\)\")",
+      "Bash(curl -s --max-time 3 localhost:8000/)",
+      "Bash(./venv/bin/python -c ' *)",
+      "Bash(curl -s --max-time 30 http://localhost:3000/)",
+      "Bash(curl -s --max-time 30 http://localhost:3000/fleet-api)"
     ]
   }
 }

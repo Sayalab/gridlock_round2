@@ -1,6 +1,8 @@
 // Client API helpers — always hit the real backend through the Next.js gateway
 // routes (/api/*), which proxy to the FastAPI server (ML_API_URL).
 import type {
+  ApiKeyList,
+  CreatedApiKey,
   ForecastRequest,
   ForecastResponse,
   LiveFeedResponse,
@@ -8,8 +10,8 @@ import type {
   RiskMapResponse,
 } from "./types";
 
-async function getJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url, { cache: "no-store" });
+async function getJSON<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, { cache: "no-store", ...init });
   if (!res.ok) throw new Error(`${url} -> ${res.status}`);
   return res.json();
 }
@@ -27,12 +29,31 @@ export function getRiskMap(datetime?: string): Promise<RiskMapResponse> {
   return getJSON<RiskMapResponse>(`/api/risk-map?${qs.toString()}`);
 }
 
-export function getFleetQuarantines(opts?: { since?: string; window?: number; activeOnly?: boolean }): Promise<QuarantineResponse> {
+export function getFleetQuarantines(opts?: {
+  since?: string;
+  window?: number;
+  activeOnly?: boolean;
+  apiKey?: string;
+}): Promise<QuarantineResponse> {
   const qs = new URLSearchParams();
   if (opts?.since) qs.set("since", opts.since);
   qs.set("window", String(opts?.window ?? 240));
   qs.set("active_only", String(opts?.activeOnly ?? true));
-  return getJSON<QuarantineResponse>(`/api/fleet/quarantines?${qs.toString()}`);
+  const headers: Record<string, string> = {};
+  if (opts?.apiKey) headers["X-API-Key"] = opts.apiKey;
+  return getJSON<QuarantineResponse>(`/api/fleet/quarantines?${qs.toString()}`, { headers });
+}
+
+export function getFleetKeys(): Promise<ApiKeyList> {
+  return getJSON<ApiKeyList>(`/api/fleet/keys`);
+}
+
+export function createFleetKey(name: string, fleet: string): Promise<CreatedApiKey> {
+  return getJSON<CreatedApiKey>(`/api/fleet/keys`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, fleet }),
+  });
 }
 
 export async function postForecast(body: ForecastRequest): Promise<ForecastResponse> {

@@ -19,6 +19,24 @@ SEVERE_THRESHOLD = 75          # matches LEGEND "Severe" min in config.py
 _EXPIRY_BUFFER_MIN = 20        # queue keeps dissipating after the lane clears
 _FLEETS = ["Flipkart", "Swiggy", "Zepto", "Amazon", "Rapido"]
 _M_PER_DEG = 111320.0          # metres per degree latitude (equirectangular)
+_IST = timezone(timedelta(hours=5, minutes=30))  # Bengaluru local time
+
+
+def _delivery_density(hour: int) -> float:
+    """Commercial-delivery traffic intensity by local hour — peaks at lunch and
+    dinner, when delivery fleets are the biggest share of the road."""
+    lunch = max(0, 6 - abs(hour - 13))    # 0..6
+    dinner = max(0, 7 - abs(hour - 20))   # 0..7
+    return lunch + dinner                 # 0..7
+
+
+def _volume_removed_pct(risk: int, closure: float, high: bool, issued_dt) -> int:
+    """Estimated share of vehicle volume kept out of the choke point by quarantining
+    commercial fleets. Varies per incident with severity, closure (how completely
+    drivers avoid), and time-of-day delivery density. Lands in ~14-34%."""
+    hour = issued_dt.astimezone(_IST).hour
+    pct = 12 + risk * 0.10 + closure * 12 + _delivery_density(hour) * 1.3 + (3 if high else 0)
+    return int(round(max(12, min(34, pct))))
 
 
 def is_eligible(inc: dict) -> bool:
@@ -77,7 +95,7 @@ def build_quarantine(inc: dict) -> dict | None:
     status = "active"
 
     severity = "severe" if risk >= SEVERE_THRESHOLD else "high" if risk >= 55 else "elevated"
-    vol_pct = int(round(min(35, 15 + closure * 15 + (5 if high else 0))))
+    vol_pct = _volume_removed_pct(risk, closure, high, issued)
 
     # trimmed projection of the diversion routes — NO polylines / signal plans
     # (those are ops-side detail; fleets only need ranked alternatives)
