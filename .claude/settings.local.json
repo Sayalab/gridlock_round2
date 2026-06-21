@@ -27,7 +27,16 @@
       "Bash(./venv/bin/python -c ' *)",
       "Bash(curl -s --max-time 30 http://localhost:3000/)",
       "Bash(curl -s --max-time 30 http://localhost:3000/fleet-api)",
-      "Bash(grep -iE \"\\\\.\\(tsx|jsx\\)$\")"
+      "Bash(grep -iE \"\\\\.\\(tsx|jsx\\)$\")",
+      "Bash(gh repo *)",
+      "Bash(git remote *)",
+      "Bash(git fetch *)",
+      "Bash(git merge *)",
+      "Bash(:)",
+      "Bash(git checkout *)",
+      "Bash(git add *)",
+      "Bash(grep -rn *)",
+      "Bash(echo \"EXIT: $?\")"
     ]
   }
 }

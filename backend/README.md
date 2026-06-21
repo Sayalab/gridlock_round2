@@ -1,3 +1,12 @@
+---
+title: Gridlock Backend
+emoji: 🚦
+colorFrom: blue
+colorTo: red
+sdk: docker
+pinned: false
+app_port: 7860
+---
 # Gridlock Backend — Event-Driven Congestion API
 
 FastAPI backend for Flipkart GRID Round 2 (Theme 2). Serves the 3 endpoints
